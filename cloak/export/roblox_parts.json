@@ -1,0 +1,58 @@
+{
+  "units": "studs",
+  "space": "R6 Torso local (X right, Y up, -Z forward)",
+  "parts": {
+    "CloakCape": {
+      "triangles": 13320,
+      "size": [
+        5.5326,
+        3.7303,
+        1.7839
+      ],
+      "center": [
+        0.0111,
+        -0.7832,
+        1.0046
+      ]
+    },
+    "CloakCowl": {
+      "triangles": 11004,
+      "size": [
+        2.4897,
+        1.5395,
+        2.1623
+      ],
+      "center": [
+        0.0015,
+        0.8709,
+        0.2701
+      ]
+    },
+    "CloakDrapes": {
+      "triangles": 7748,
+      "size": [
+        3.1373,
+        3.1395,
+        2.3352
+      ],
+      "center": [
+        0.1486,
+        -0.5118,
+        0.4688
+      ]
+    },
+    "CloakHardware": {
+      "triangles": 14236,
+      "size": [
+        2.171,
+        2.5149,
+        2.272
+      ],
+      "center": [
+        -0.0262,
+        0.1976,
+        0.2343
+      ]
+    }
+  }
+}
