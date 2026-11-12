@@ -159,6 +159,7 @@ def build_cape(cols=89, rows=49, seed=11):
 
     v = np.linspace(0.0, 1.0, rows)[:, None]
     uu = u[None, :]
+    base = P.copy()  # fold-free surface: bones are placed on it
     nrm = horizontal_normals(P)
     # orient outward (away from the body axis)
     radial = P[..., :2] - np.array([0.0, 0.25])
@@ -189,6 +190,7 @@ def build_cape(cols=89, rows=49, seed=11):
 
     part = grid_part(P, "cape", name="cape")
     part["col_len"] = col_len
+    part["base"] = base
     return part
 
 
@@ -387,15 +389,21 @@ def build_drape(cols=16, rows=56, seed=71):
     length = 3.47
     dist = np.linspace(0.0, length, rows)
     P, fn, past = wrap_over_body(start, d, dist, off=0.058)
-    z = P[..., 2]
-    # hang slightly away from the legs below the torso and fold vertically
+    z = P[..., 2].copy()
+    # fold-free base (bones are placed on it): hangs slightly away from the legs below the torso
+    base = P.copy()
+    base[..., 1] -= 0.07 * smoothstep(2.1, 0.9, z)
+    base[..., 0] += 0.06 * smoothstep(2.0, 0.9, z) * (s[None, :] - 0.3)
+    # vertical folds
     fold = smooth_random_1d(seed, 6)
     F = np.sin(2 * np.pi * (2.4 * s + 0.1 * fold(s)) + 0.6)[None, :]
     A = 0.045 * smoothstep(0.1, 2.5, past) + 0.008
     P += fn * (A * F)[..., None] * (past > 0)[..., None]
     P[..., 1] -= (0.07 * smoothstep(2.1, 0.9, z) + 0.02 * smoothstep(3.0, 1.0, z) * fold(s * 0.8 + 0.3)[None, :])
     P[..., 0] += 0.06 * smoothstep(2.0, 0.9, z) * (s[None, :] - 0.3)
-    return grid_part(P, "drape")
+    part = grid_part(P, "drape")
+    part["base"] = base
+    return part
 
 
 # --------------------------------------------------------------------------- frayed fringes
@@ -475,8 +483,9 @@ def build_banner_back(cape, cols=7, rows=40, seed=93):
     return grid_part(np.stack([X, np.repeat(Y, 1, 1), Z], -1), "banner_back")
 
 
-GROUP_OF = {"cape": "cape", "hood": "cowl", "capelet": "drapes", "drape": "drapes",
-            "banner_front": "drapes", "banner_back": "drapes"}
+# the back banner rides on the cape, so it lives in the cape mesh and shares its bones
+GROUP_OF = {"cape": "cape", "banner_back": "cape", "hood": "cowl", "capelet": "drapes", "drape": "drapes",
+            "banner_front": "drapes"}
 
 
 def group_of(name):
