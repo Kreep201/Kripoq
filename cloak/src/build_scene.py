@@ -18,7 +18,7 @@ import numpy as np  # noqa: E402
 from mathutils import Vector  # noqa: E402
 from mathutils.bvhtree import BVHTree  # noqa: E402
 
-from cloakgen import bl_util, fabric_geom, hardware, layout  # noqa: E402
+from cloakgen import bl_util, fabric_geom, hardware, layout, rig, rigspec  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 BUILD = os.path.abspath(argv[0] if argv else os.path.join(SRC, "..", "build"))
@@ -290,8 +290,15 @@ def build():
 
     cols = {g: new_collection("Cloak_" + g) for g in ("cape", "cowl", "drapes", "hardware")}
     fabric_objs, sheets, stats = [], [], {}
+    surfaces, base_grids, skinned = {}, {}, []
     for part in fabric_geom.build_all_fabric():
         ob = bl_util.object_from_part(part, cols[part["group"]])
+        if part["name"] in ("cape", "drape"):
+            surfaces[part["name"]] = rig.ParamSurface(part)
+            base_grids[part["name"]] = part["base"]
+        # weights first: face deletion and the double-siding below both carry them along
+        if rig.weight_fabric_part(ob, part, surfaces):
+            skinned.append(ob)
         if part["double_sided"]:
             bl_util.orient_outward(ob)
             removed = delete_transparent_faces(ob, alpha)
@@ -305,6 +312,17 @@ def build():
 
     hw_objs, info = build_hardware(fabric_objs, body_objs, cols["hardware"])
     print("hardware:", info)
+    rig.weight_hardware(hw_objs, surfaces["cape"])
+    skinned += hw_objs
+    joints = {"Cape": rigspec.joint_positions("Cape", base_grids["cape"]),
+              "Drape": rigspec.joint_positions("Drape", base_grids["drape"])}
+    rig_col = new_collection("CloakRig")
+    rig_ob = rig.build_armature(joints, rig.used_bones(skinned), rig_col)
+    rig.bind(skinned, rig_ob)
+    rig_data = rig.write_rig_json(os.path.join(BUILD, "rig.json"), joints, rig_ob)
+    unused = sorted({b["name"] for b in rig_data["bones"]} - rig.used_bones(skinned))
+    print("rig: %d bones, %d joints, zero-influence bones: %s" % (len(rig_data["bones"]), len(rig_data["joints"]),
+                                                                  unused or "none"))
 
     if BAKE:
         tb = time.time()

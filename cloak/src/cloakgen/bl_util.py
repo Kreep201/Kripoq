@@ -110,7 +110,8 @@ def make_double_sided(ob, gap=0.004):
     uv = bm.loops.layers.uv.active
     vmap = {}
     for v in bm.verts[:]:
-        nv = bm.verts.new(v.co - v.normal * gap)
+        # passing v as the example copies its custom data, including skin weights
+        nv = bm.verts.new(v.co - v.normal * gap, v)
         vmap[v] = nv
     for f in bm.faces[:]:
         loops = list(f.loops)[::-1]
